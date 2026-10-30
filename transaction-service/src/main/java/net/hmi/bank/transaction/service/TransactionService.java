@@ -38,6 +38,12 @@ public class TransactionService {
         if (dto.accountId() == null) {
             throw new BusinessRuleException("accountId is required");
         }
+        if (dto.merchantCategory() == null || dto.merchantCategory().isBlank()) {
+            throw new BusinessRuleException("merchantCategory is required");
+        }
+        if (dto.country() == null || dto.country().isBlank()) {
+            throw new BusinessRuleException("country is required");
+        }
         validateAmount(dto.amount());
 
         // 1. consult the account (existence, status, currency, balance)

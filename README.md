@@ -239,6 +239,38 @@ Pas de nouvelle tentative automatique sur le débit et le crédit : ces opérati
 | T9  | Virement vers le même compte | 422 | ![img_28.png](img_28.png)                                         |
 | T10 | Historique du compte A | 200 | ![img_29.png](img_29.png)![img_30.png](img_30.png)                                          |
 
+### Étape 5 - transaction-service : GraphQL et MCP (Partie C.2)
+
+Les connecteurs GraphQL et MCP appellent la même couche `TransactionService` que le connecteur REST. Aucune règle métier n'est écrite dans les connecteurs : le plafond, la devise, le statut du compte et le solde sont vérifiés dans la couche service pour les trois connecteurs.
+
+#### GraphQL
+
+- Schéma : `src/main/resources/graphql/schema.graphqls`
+- Point d'accès : `/graphql`, interface de test : `/graphiql`
+- Requêtes : `transactions` (filtre optionnel `accountId`), `transaction`
+- Mutations : `createTransaction`, `transfer`
+- Les erreurs sont converties en `NOT_FOUND` (introuvable), `BAD_REQUEST` (règle métier non respectée) et `INTERNAL_ERROR` (account-service indisponible).
+- Limite connue : le montant est exposé en `Float` et la date en `String` (ISO) afin d'éviter une dépendance supplémentaire pour des scalaires personnalisés. Le calcul interne reste en `BigDecimal`.
+
+#### MCP
+
+- Point d'accès : `/mcp` (transport streamable HTTP), nom du serveur : `transaction-mcp-server`
+- Outils exposés : `list_transactions`, `get_transaction`, `create_payment`, `transfer_funds`
+- Les descriptions des outils indiquent les règles (plafond, devise, compte actif) pour aider le LLM à choisir l'outil et à expliquer un refus.
+- Les noms d'outils sont différents de ceux d'account-service, car l'agent sera connecté aux deux serveurs.
+
+#### Tests
+
+| N° | Scénario | Résultat attendu | Capture                   |
+|----|---|---|---------------------------|
+| G1 | GraphQL : lister les transactions | 200, liste | ![img_31.png](img_31.png) |
+| G2 | GraphQL : paiement de 100 sur le compte A | transaction créée, solde de A égal à 400 | ![img_32.png](img_32.png) |
+| G3 | GraphQL : montant 1500 | erreur BAD_REQUEST (plafond) | ![img_33.png](img_33.png) |
+| G4 | GraphQL : virement de 50 de A vers B | transferId, deux écritures | ![img_34.png](img_34.png) |
+| G5 | GraphQL : virement vers le même compte | erreur BAD_REQUEST | ![img_35.png](img_35.png) |
+| G6 | GraphQL : transaction inexistante | erreur NOT_FOUND | ![img_36.png](img_36.png)                          |
+| M1 | MCP : liste des outils | 4 outils |                ![img_37.png](img_37.png)           |
+| M2 | MCP : list_transactions | historique du compte |            ![img_38.png](img_38.png)               |
 
 
 ## 6. Hypothèses retenues
@@ -254,8 +286,8 @@ L'énoncé ne précise pas certains points. Les hypothèses suivantes sont reten
 - [x] Tests de account-service (REST)
 - [x] account-service : GraphQL et MCP
 - [x] transaction-service : règles métier et virement
-- [ ] Communication OpenFeign et tolérance aux pannes (Resilience4J)
-- [ ] transaction-service : GraphQL et MCP
+- [x] Communication OpenFeign et tolérance aux pannes (Resilience4J)
+- [x] transaction-service : GraphQL et MCP
 - [ ] Discovery service (Eureka)
 - [ ] Config service
 - [ ] Gateway (Spring Cloud Gateway)
