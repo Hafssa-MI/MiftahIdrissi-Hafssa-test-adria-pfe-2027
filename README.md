@@ -272,7 +272,35 @@ Les connecteurs GraphQL et MCP appellent la même couche `TransactionService` qu
 | M1 | MCP : liste des outils | 4 outils |                ![img_37.png](img_37.png)           |
 | M2 | MCP : list_transactions | historique du compte |            ![img_38.png](img_38.png)               |
 
+### Étape 6 - Services techniques (Partie D)
 
+#### discovery-service (Eureka, port 8761)
+Annuaire des services. Il ne s'enregistre pas lui-même (`register-with-eureka=false`, `fetch-registry=false`). account-service, transaction-service et gateway-service s'y enregistrent au démarrage.
+
+#### config-service (port 8888)
+Serveur de configuration en mode `native` (fichiers dans `src/main/resources/config`). Le fichier `transaction-service.properties` fournit `bank.transaction.max-amount=1000`. transaction-service le récupère avec `spring.config.import=configserver:http://localhost:8888`.
+
+#### gateway-service (Spring Cloud Gateway, port 9999)
+Point d'entrée unique, basé sur WebFlux (module réactif, séparé des services MVC). Routes : `/accounts/**` vers account-service, `/transactions/**` et `/transfers/**` vers transaction-service, avec résolution `lb://` par Eureka.
+Les points d'accès `/graphql` et `/mcp` ne passent pas par la gateway : les deux services les exposent sur le même chemin. L'agent IA se connecte directement aux serveurs MCP.
+
+#### OpenFeign avec Eureka
+L'URL fixe d'account-service a été supprimée du client Feign. L'appel utilise le nom logique `account-service`, résolu par Eureka.
+
+#### Ordre de démarrage
+discovery-service, config-service, account-service, transaction-service, gateway-service.
+
+#### Tests
+
+| N° | Scénario | Résultat attendu | Capture |
+|---|---|---|---|
+| D1 | Tableau de bord Eureka | 3 services enregistrés | |
+| C1 | `/transaction-service/default` du config-service | `bank.transaction.max-amount` égal à 1000 | |
+| GW1 | Créer un compte via la gateway | 201 | |
+| GW2 | Lister les comptes via la gateway | 200 | |
+| GW3 | Paiement de 100 via la gateway | 201 | |
+| GW4 | Paiement de 1500 via la gateway | 422 (plafond issu du config-service) | |
+| GW5 | Lister les transactions via la gateway | 200 | |
 ## 6. Hypothèses retenues
 
 L'énoncé ne précise pas certains points. Les hypothèses suivantes sont retenues :
@@ -288,9 +316,9 @@ L'énoncé ne précise pas certains points. Les hypothèses suivantes sont reten
 - [x] transaction-service : règles métier et virement
 - [x] Communication OpenFeign et tolérance aux pannes (Resilience4J)
 - [x] transaction-service : GraphQL et MCP
-- [ ] Discovery service (Eureka)
-- [ ] Config service
-- [ ] Gateway (Spring Cloud Gateway)
+- [x] Discovery service (Eureka)
+- [x] Config service
+- [x] Gateway (Spring Cloud Gateway)
 - [ ] Kafka : producteur et consommateur
 - [ ] Agent IA (Spring AI, MCP, Telegram)
 - [ ] Diagramme de classes et schéma d'architecture
