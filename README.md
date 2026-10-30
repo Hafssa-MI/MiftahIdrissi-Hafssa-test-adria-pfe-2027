@@ -1,7 +1,7 @@
 # Plateforme bancaire - Test Adria PFE 27
 
-Auteur : à compléter (nom et prénom)
-Dépôt : nom-prenom-test-adria-pfe-27
+Auteur : Hafssa Miftah Idrissi
+Dépôt : MiftahIdrissi-Hafssa-test-adria-pfe-27
 
 ## 1. Présentation
 
