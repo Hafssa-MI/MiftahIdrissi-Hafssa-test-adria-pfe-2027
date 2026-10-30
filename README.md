@@ -166,6 +166,81 @@ Les règles de validation (montant strictement positif, devise sur 3 lettres, so
 | 17 | MCP : get account            | compte récupéré        |![img_16.png](img_16.png)|
 | 18 | MCP : débiter un compte      | succes                 |![img_17.png](img_17.png)|
 
+
+### Étape 4 - transaction-service, OpenFeign et Resilience4J (Partie C.2 et C.3)
+
+#### Modèle
+
+| Champ | Type | Remarque |
+|---|---|---|
+| id | UUID | généré automatiquement |
+| accountId | UUID | compte concerné |
+| amount | BigDecimal | montant strictement positif, plafonné |
+| currency | String | doit correspondre à la devise du compte |
+| merchantCategory | String | "TRANSFER" pour un virement |
+| country | String | vide pour un virement |
+| createdAt | Instant | date de création |
+| type | PAYMENT, TRANSFER_OUT, TRANSFER_IN | ajout au modèle minimal |
+| transferId | UUID | lie les deux écritures d'un virement, ajout au modèle minimal |
+
+L'entité est nommée BankTransaction pour éviter les conflits avec les types Transaction de JPA et de Spring.
+
+#### Règles métier
+
+1. Le montant est strictement positif et inférieur ou égal à `bank.transaction.max-amount` (1000, fourni plus tard par le config-service).
+2. Le compte doit exister (sinon 404) et être actif.
+3. La devise de la transaction doit correspondre à celle du compte.
+4. Le solde du compte est consulté avant chaque transaction et doit couvrir le montant.
+5. La transaction est enregistrée, puis le compte est débité. Si le débit échoue, l'enregistrement est annulé.
+
+Les règles sont vérifiées dans la couche service, pour qu'elles s'appliquent à tous les connecteurs.
+
+#### Virement
+
+`POST /transfers` débite le compte source puis crédite le compte destination. Si le crédit échoue, le débit est annulé par une opération compensatoire. Si cette annulation échoue aussi, l'erreur est journalisée pour un rapprochement manuel. Les deux écritures partagent le même `transferId`. Le plafond s'applique aussi aux virements (hypothèse).
+
+#### Communication avec account-service (OpenFeign)
+
+Le client `AccountClient` appelle `GET /accounts/{id}`, `POST /accounts/{id}/debit` et `POST /accounts/{id}/credit`. Un décodeur d'erreurs transforme les réponses HTTP en exceptions métier (404 : introuvable, autres 4xx : règle métier, 5xx : indisponible).
+
+#### Tolérance aux pannes (Resilience4J)
+
+| Mécanisme | Paramétrage |
+|---|---|
+| Circuit breaker | fenêtre de 10 appels, minimum 5 appels, ouverture à 50 % d'échecs, 10 secondes en état ouvert, 2 appels en semi-ouvert |
+| Time limiter | 3 secondes |
+| Timeouts Feign | connexion 1 s, lecture 2 s |
+| Erreurs ignorées par le circuit | 404 et 422, ce sont des erreurs fonctionnelles |
+| Repli (fallback) | exception claire, réponse 503 |
+
+Pas de nouvelle tentative automatique sur le débit et le crédit : ces opérations ne sont pas idempotentes, et une nouvelle tentative pourrait débiter deux fois le compte. Le repli ne simule jamais un succès.
+
+#### API REST
+
+| Méthode | URL | Description | Succès |
+|---|---|---|---|
+| POST | /transactions | Enregistrer une transaction | 201 |
+| GET | /transactions | Lister (filtre optionnel accountId) | 200 |
+| GET | /transactions/{id} | Consulter une transaction | 200 |
+| POST | /transfers | Effectuer un virement | 201 |
+
+#### Tests
+
+| N°  | Scénario | Résultat attendu | Capture                                             |
+|-----|---|---|-----------------------------------------------------|
+| T1  | Paiement de 100 sur le compte A | 201, solde de A égal à 400 | ![img_18.png](img_18.png) ![img_19.png](img_19.png) |
+| T2  | Montant 1500 | 422 (plafond) | ![img_20.png](img_20.png)                           |
+| T3  | Montant négatif | 400 | ![img_21.png](img_21.png)                           |
+| T4  | Devise différente de celle du compte | 422 | ![img_22.png](img_22.png)                           |
+| T5  | Compte inexistant | 404 | ![img_23.png](img_23.png)                                                    |
+| T6  | Montant supérieur au solde | 422 | ![img_24.png](img_24.png)                                     |
+| T7  | Paiement sur compte bloqué | 422 | ![img_25.png](img_25.png)                                         |
+| T8  | Virement de 50 de A vers B | 201, A égal à 350, B égal à 150 | ![img_26.png](img_26.png)![img_27.png](img_27.png)                                          |
+| T9  | Virement vers le même compte | 422 | ![img_28.png](img_28.png)                                         |
+| T10 | Historique du compte A | 200 | ![img_29.png](img_29.png)![img_30.png](img_30.png)                                          |
+
+
+
 ## 6. Hypothèses retenues
 
 L'énoncé ne précise pas certains points. Les hypothèses suivantes sont retenues :
@@ -178,7 +253,7 @@ L'énoncé ne précise pas certains points. Les hypothèses suivantes sont reten
 - [x] Projet Maven parent et module account-service
 - [x] Tests de account-service (REST)
 - [x] account-service : GraphQL et MCP
-- [ ] transaction-service : règles métier et virement
+- [x] transaction-service : règles métier et virement
 - [ ] Communication OpenFeign et tolérance aux pannes (Resilience4J)
 - [ ] transaction-service : GraphQL et MCP
 - [ ] Discovery service (Eureka)
