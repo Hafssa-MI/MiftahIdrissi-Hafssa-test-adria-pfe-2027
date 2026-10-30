@@ -11,15 +11,15 @@ Ce document décrit le travail réalisé étape par étape. Il est complété au
 
 ## 2. Architecture cible
 
-| Composant | Rôle | Port prévu | État |
-|---|---|---|---|
-| account-service | Gestion des comptes bancaires | 8081 | En cours |
-| transaction-service | Enregistrement et consultation des transactions, virements | 8082 | À faire |
-| discovery-service | Annuaire des services (Eureka) | 8761 | À faire |
-| config-service | Configuration centralisée (bank.transaction.max-amount=1000) | 8888 | À faire |
-| gateway-service | Point d'entrée unique (Spring Cloud Gateway) | 9999 | À faire |
-| chatbot-service | Agent IA connecté aux services via MCP | 8090 | À faire |
-| transaction-consumer | Consommation des événements Kafka | à définir | À faire |
+| Composant | Rôle | Port prévu | 
+|---|---|---|
+| account-service | Gestion des comptes bancaires | 8081 | 
+| transaction-service | Enregistrement et consultation des transactions, virements | 8082 | 
+| discovery-service | Annuaire des services (Eureka) | 8761 | 
+| config-service | Configuration centralisée (bank.transaction.max-amount=1000) | 8888 |
+| gateway-service | Point d'entrée unique (Spring Cloud Gateway) | 9999 | 
+| chatbot-service | Agent IA connecté aux services via MCP | 8090 | 
+| transaction-consumer | Consommation des événements Kafka | à définir | 
 
 ## 3. Technologies
 
