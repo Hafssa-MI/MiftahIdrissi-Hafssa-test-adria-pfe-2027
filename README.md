@@ -132,6 +132,39 @@ Les tests manuels sont décrits dans le fichier `http/account.http` (client HTTP
 | 11 | Consulter un compte inexistant | 404 | ![img_10.png](img_10.png)|
 | 12 | Créer un compte avec une devise invalide | 400 | ![img_11.png](img_11.png)|
 
+### Étape 3 - account-service : GraphQL et MCP (Partie C.1)
+
+Les connecteurs GraphQL et MCP appellent la même couche `AccountService` que le connecteur REST.
+
+#### Validation dans la couche service
+
+Les règles de validation (montant strictement positif, devise sur 3 lettres, solde initial non négatif) sont vérifiées dans la couche service. Elles s'appliquent donc quel que soit le connecteur utilisé. Le REST renvoie 400 grâce à la validation des DTO, GraphQL et MCP s'appuient sur les contrôles du service.
+
+#### GraphQL
+
+- Schéma : `src/main/resources/graphql/schema.graphqls`
+- Point d'accès : `/graphql`, interface de test : `/graphiql`
+- Requêtes : `accounts`, `account`
+- Mutations : `createAccount`, `updateAccountStatus`, `debitAccount`, `creditAccount`
+- Les erreurs sont converties en `NOT_FOUND` (compte inexistant) et `BAD_REQUEST` (règle métier non respectée).
+
+#### MCP
+
+- Point d'accès : `/mcp` (transport streamable HTTP)
+- Outils exposés : `list_accounts`, `get_account`, `create_account`, `update_account_status`, `debit_account`, `credit_account`
+- Les descriptions des outils guident le choix du LLM.
+- Test réalisé avec MCP Inspector.
+
+#### Tests
+
+| N° | Scénario                     | Résultat attendu       | Capture                   |
+|----|------------------------------|------------------------|---------------------------|
+| 13 | GraphQL : lister les comptes | 200, liste des comptes | ![img_12.png](img_12.png) |
+| 14 | GraphQL : créer un compte    | compte créé            | ![img_13.png](img_13.png) |
+| 15 | GraphQL : débiter un compte  | solde mis à jour       | ![img_14.png](img_14.png)                 |
+| 16 | MCP : liste des outils       | 6 outils               |![img_15.png](img_15.png)|
+| 17 | MCP : get account            | compte récupéré        |![img_16.png](img_16.png)|
+| 18 | MCP : débiter un compte      | succes                 |![img_17.png](img_17.png)|
 
 ## 6. Hypothèses retenues
 
@@ -144,7 +177,7 @@ L'énoncé ne précise pas certains points. Les hypothèses suivantes sont reten
 
 - [x] Projet Maven parent et module account-service
 - [x] Tests de account-service (REST)
-- [ ] account-service : GraphQL et MCP
+- [x] account-service : GraphQL et MCP
 - [ ] transaction-service : règles métier et virement
 - [ ] Communication OpenFeign et tolérance aux pannes (Resilience4J)
 - [ ] transaction-service : GraphQL et MCP

@@ -22,16 +22,6 @@ public class AccountService {
     private final AccountRepository repository;
     private final AccountMapper mapper;
 
-    @Transactional
-    public AccountResponseDTO create(AccountCreateDTO dto) {
-        Account account = Account.builder()
-                .customerReference(dto.customerReference())
-                .currency(dto.currency().toUpperCase())
-                .balance(dto.initialBalance())
-                .status(AccountStatus.ACTIVE)
-                .build();
-        return mapper.toDto(repository.save(account));
-    }
 
     @Transactional(readOnly = true)
     public List<AccountResponseDTO> findAll() {
@@ -55,8 +45,39 @@ public class AccountService {
         return mapper.toDto(account);
     }
 
+    private Account getEntity(UUID id) {
+        return repository.findById(id).orElseThrow(() -> new AccountNotFoundException(id));
+    }
+
+    private void requireActive(Account account) {
+        if (account.getStatus() != AccountStatus.ACTIVE) {
+            throw new BusinessRuleException("Account " + account.getId() + " is " + account.getStatus());
+        }
+    }
+
+    @Transactional
+    public AccountResponseDTO create(AccountCreateDTO dto) {
+        if (dto.customerReference() == null || dto.customerReference().isBlank()) {
+            throw new BusinessRuleException("customerReference is required");
+        }
+        if (dto.currency() == null || !dto.currency().matches("[A-Za-z]{3}")) {
+            throw new BusinessRuleException("currency must be a 3-letter code");
+        }
+        if (dto.initialBalance() < 0) {
+            throw new BusinessRuleException("initialBalance must not be negative");
+        }
+        Account account = Account.builder()
+                .customerReference(dto.customerReference())
+                .currency(dto.currency().toUpperCase())
+                .balance(dto.initialBalance())
+                .status(AccountStatus.ACTIVE)
+                .build();
+        return mapper.toDto(repository.save(account));
+    }
+
     @Transactional
     public AccountResponseDTO debit(UUID id, BigDecimal amount) {
+        requirePositive(amount);
         Account account = getEntity(id);
         requireActive(account);
         BigDecimal newBalance = BigDecimal.valueOf(account.getBalance()).subtract(amount);
@@ -69,19 +90,16 @@ public class AccountService {
 
     @Transactional
     public AccountResponseDTO credit(UUID id, BigDecimal amount) {
+        requirePositive(amount);
         Account account = getEntity(id);
         requireActive(account);
         account.setBalance(BigDecimal.valueOf(account.getBalance()).add(amount).doubleValue());
         return mapper.toDto(account);
     }
 
-    private Account getEntity(UUID id) {
-        return repository.findById(id).orElseThrow(() -> new AccountNotFoundException(id));
-    }
-
-    private void requireActive(Account account) {
-        if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new BusinessRuleException("Account " + account.getId() + " is " + account.getStatus());
+    private void requirePositive(BigDecimal amount) {
+        if (amount == null || amount.signum() <= 0) {
+            throw new BusinessRuleException("Amount must be strictly positive");
         }
     }
 }
