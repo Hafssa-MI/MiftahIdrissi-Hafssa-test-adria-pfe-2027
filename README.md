@@ -117,22 +117,21 @@ Puis lancer la classe `AccountServiceApplication` depuis IntelliJ. Le service é
 
 Les tests manuels sont décrits dans le fichier `http/account.http` (client HTTP d'IntelliJ). Les requêtes sont exécutées dans l'ordre.
 
-| N° | Scénario | Résultat attendu | Capture |
-|---|---|---|---|
-| 1 | Créer le compte A (500 EUR) | 201, compte ACTIVE | à ajouter |
-| 2 | Créer le compte B (100 EUR) | 201 | à ajouter |
-| 3 | Lister les comptes | 200, deux comptes | à ajouter |
-| 4 | Consulter le compte A | 200 | à ajouter |
-| 5 | Débiter A de 100 | 200, solde 400 | à ajouter |
-| 6 | Créditer B de 50 | 200, solde 150 | à ajouter |
-| 7 | Débiter A d'un montant supérieur au solde | 422 | à ajouter |
-| 8 | Débiter A d'un montant négatif | 400 | à ajouter |
-| 9 | Bloquer A | 200, statut BLOCKED | à ajouter |
-| 10 | Débiter A (compte bloqué) | 422 | à ajouter |
-| 11 | Consulter un compte inexistant | 404 | à ajouter |
-| 12 | Créer un compte avec une devise invalide | 400 | à ajouter |
+| N° | Scénario | Résultat attendu | Capture                 |
+|---|---|---|-------------------------|
+| 1 | Créer le compte A (500 EUR) | 201, compte ACTIVE | ![img.png](img.png)     |
+| 2 | Créer le compte B (100 EUR) | 201 | ![img_1.png](img_1.png) |
+| 3 | Lister les comptes | 200, deux comptes | ![img_2.png](img_2.png) |
+| 4 | Consulter le compte A | 200 | ![img_3.png](img_3.png) |
+| 5 | Débiter A de 100 | 200, solde 400 | ![img_4.png](img_4.png) |
+| 6 | Créditer B de 50 | 200, solde 150 | ![img_5.png](img_5.png) |
+| 7 | Débiter A d'un montant supérieur au solde | 422 | ![img_6.png](img_6.png) |
+| 8 | Débiter A d'un montant négatif | 400 | ![img_7.png](img_7.png) |
+| 9 | Bloquer A | 200, statut BLOCKED | ![img_8.png](img_8.png) |
+| 10 | Débiter A (compte bloqué) | 422 |![img_9.png](img_9.png)                         |
+| 11 | Consulter un compte inexistant | 404 | ![img_10.png](img_10.png)|
+| 12 | Créer un compte avec une devise invalide | 400 | ![img_11.png](img_11.png)|
 
-Les résultats réellement obtenus seront confirmés par les captures d'écran du rapport.
 
 ## 6. Hypothèses retenues
 
@@ -144,7 +143,7 @@ L'énoncé ne précise pas certains points. Les hypothèses suivantes sont reten
 ## 7. Suite du travail
 
 - [x] Projet Maven parent et module account-service
-- [ ] Tests de account-service (REST)
+- [x] Tests de account-service (REST)
 - [ ] account-service : GraphQL et MCP
 - [ ] transaction-service : règles métier et virement
 - [ ] Communication OpenFeign et tolérance aux pannes (Resilience4J)
